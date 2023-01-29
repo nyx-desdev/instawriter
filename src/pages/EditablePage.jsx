@@ -1,14 +1,27 @@
-import React, { useState } from "react";
+import React from "react";
+
+// import "./styles.css";
 import EditableBlock from "../components/EditableBlock";
-import { setCaretToEnd } from "../utils/setCaretToEnd";
+
 import { uid } from "../utils/uid";
+import { setCaretToEnd } from "../utils/caretHelpers";
 
-const intialBlock = { id: uid(), html: "", tag: "p" };
+const initialBlock = { id: uid(), html: "", tag: "p" };
+// JSON.parse(localStorage.getItem("blocks"));
 
-const EditablePage = () => {
-  const [blocks, setBlocks] = useState([intialBlock]);
+class EditablePage extends React.Component {
+  constructor(props) {
+    super(props);
+    this.updatePageHandler = this.updatePageHandler.bind(this);
+    this.addBlockHandler = this.addBlockHandler.bind(this);
+    this.deleteBlockHandler = this.deleteBlockHandler.bind(this);
+    this.addPlaceholder = this.addPlaceholder.bind(this);
+    this.state = {
+      blocks: JSON.parse(localStorage.getItem("blocks")) || [initialBlock],
+    };
+  }
 
-  const updatePageHandler = (updatedBlock) => {
+  updatePageHandler(updatedBlock) {
     const blocks = this.state.blocks;
     const index = blocks.map((b) => b.id).indexOf(updatedBlock.id);
     const updatedBlocks = [...blocks];
@@ -17,51 +30,77 @@ const EditablePage = () => {
       tag: updatedBlock.tag,
       html: updatedBlock.html,
     };
-    setBlocks({ blocks: updatedBlocks });
-  };
+    this.setState({ blocks: updatedBlocks }, () =>
+      localStorage.setItem("blocks", JSON.stringify(updatedBlocks))
+    );
+    // console.log("updating");
+  }
 
-  const addBlockHandler = (currentBlock) => {
+  addBlockHandler(currentBlock) {
     const newBlock = { id: uid(), html: "", tag: "p" };
-    // const blocks = blocks;
+    const blocks = this.state.blocks;
     const index = blocks.map((b) => b.id).indexOf(currentBlock.id);
     const updatedBlocks = [...blocks];
     updatedBlocks.splice(index + 1, 0, newBlock);
-    setBlocks({ blocks: updatedBlocks }, () => {
+    this.setState({ blocks: updatedBlocks }, () => {
       currentBlock.ref.nextElementSibling.focus();
     });
-  };
+  }
 
-  const deleteBlockHandler = (currentBlock) => {
+  deleteBlockHandler(currentBlock) {
+    // Only delete the block, if there is a preceding one
     const previousBlock = currentBlock.ref.previousElementSibling;
-    if (previousBlock) {
+    if (this.state.blocks.length > 1) {
       const blocks = this.state.blocks;
       const index = blocks.map((b) => b.id).indexOf(currentBlock.id);
       const updatedBlocks = [...blocks];
       updatedBlocks.splice(index, 1);
-      setBlocks({ blocks: updatedBlocks }, () => {
+      this.setState({ blocks: updatedBlocks }, () => {
         setCaretToEnd(previousBlock);
         previousBlock.focus();
       });
     }
-  };
-  return (
-    <div className="max-w-screen-md mx-auto">
-      <h1 className="text-4xl font-bold text-slate-600 my-5">Instawriter</h1>
-      {blocks.map((block, key) => {
-        return (
-          <EditableBlock
-            key={key}
-            id={block.id}
-            tag={block.tag}
-            html={block.html}
-            updatePage={updatePageHandler}
-            addBlock={addBlockHandler}
-            deleteBlock={deleteBlockHandler}
-          />
-        );
-      })}
-    </div>
-  );
-};
+  }
+
+  // Show a placeholder for blank pages
+  addPlaceholder({ block, position, content }) {
+    const isFirstBlockWithoutHtml = position === 1 && !content;
+    const isFirstBlockWithoutSibling = !block.parentElement.nextElementSibling;
+    if (isFirstBlockWithoutHtml && isFirstBlockWithoutSibling) {
+      this.setState({
+        ...this.state,
+        html: "Type a page title...",
+        tag: "h1",
+        imageUrl: "",
+        placeholder: true,
+        isTyping: false,
+      });
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  render() {
+    return (
+      <div className="Page max-w-screen-md mx-auto">
+        <h1 className="text-4xl font-bold text-slate-600 my-5">Instawriter</h1>
+        {this.state.blocks.map((block, key) => {
+          return (
+            <EditableBlock
+              key={key}
+              id={block.id}
+              tag={block.tag}
+              html={block.html}
+              updatePage={this.updatePageHandler}
+              addBlock={this.addBlockHandler}
+              deleteBlock={this.deleteBlockHandler}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+}
 
 export default EditablePage;
