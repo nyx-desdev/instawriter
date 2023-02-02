@@ -137,7 +137,7 @@ class EditableBlock extends React.Component {
           />
         )}
         <ContentEditable
-          autofocus="autfocus"
+          autofocus="autofocus"
           className="Block outline-none"
           innerRef={this.contentEditable}
           html={this.state.html}
